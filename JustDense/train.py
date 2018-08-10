@@ -14,7 +14,7 @@ def unpickle(file):
     return dict
 	
 mnist = unpickle("../cifar-10-batches-py/data_batch_1")
-train_images=mnist[b'data']		
+train_images=mnist[b'data']
   
 train_images = train_images / 255.0
 #test_images = test_images / 255.0
@@ -97,14 +97,11 @@ def turnGray(array):
 	return gray
 
 train_images=turnGray(train_images)
-train_images=unflattenwholearray(train_images)
 #at this point train_images is 10k gray images
 #mnist = unpickle("../cifar-10-batches-py/data_batch_2")
 #train_images_temp=mnist[b'data']
 #train_images_temp=turnGray(train_images_temp)
 #train_images_temp=unflattenwholearray(train_images_temp)
-train_array=np.empty((1,10000,32,32))
-train_array[0]=train_images.copy()
 #train_array[1]=train_images_temp.copy()
 #mnist = unpickle("../cifar-10-batches-py/data_batch_3")
 #train_images_temp=mnist[b'data']
@@ -122,36 +119,37 @@ train_array[0]=train_images.copy()
 #train_images_temp=unflattenwholearray(train_images_temp)
 #train_array[4]=train_images_temp
 
-test_array=train_array.copy()#172.20.4.206  ktmim/misio  
-for i in range(1):
-	test_array[i]=makeholes(test_array[i])
+temp=unflattenwholearray(train_images)
+y=temp.copy()
+temp=makeholes(temp)
+print(temp.shape)
+print(y.shape)
+compare(temp,y,y,2)
 
-trainx=np.expand_dims(train_images, axis=3)
-trainy=np.expand_dims(test_array[0], axis=3)
-print(trainy.shape)
+temp=np.expand_dims(temp, axis=3)
+y=np.expand_dims(y, axis=3)
+#print(trainy.shape)
 
 #LEARNING TIME!
 def build_model():
   model = keras.Sequential([
-	
-	keras.layers.Conv2D(16, kernel_size=(3, 3),activation='linear',input_shape=(32,32,1),padding='same'),
-	keras.layers.Permute((3,2,1)),
-	keras.layers.Reshape([16,1024]),	
-	keras.layers.AveragePooling1D(pool_size=16, strides=None, padding='valid',data_format="channels_last"),
-	#keras.layers.Flatten(data_format=None),
-	keras.layers.Dense(1024,activation=tf.tanh),
-	keras.layers.Dense(1024,activation=tf.tanh),
-	keras.layers.Reshape([32,32,1]),
+    keras.layers.Flatten(data_format=None,input_shape=(32,32,1)),
+	keras.layers.Dense(1024, activation=tf.tanh),
+	keras.layers.Dense(1024, activation=tf.tanh),
+	keras.layers.Dense(1024, activation=tf.tanh),
+    keras.layers.Dense(1024,activation=tf.tanh),
+	keras.layers.Reshape([32,32,1])
   ])
 
-  sgd=keras.optimizers.RMSprop(lr=0.1)
+  #sgd=keras.optimizers.Adam(lr=5)
+  sgd=keras.optimizers.RMSprop(lr=0.01)
   model.compile(loss='mse', optimizer=sgd,metrics=['mae'])
   return model
 
 model = build_model()
 model.summary()
 
-EPOCHS = 10
+EPOCHS = 100
 
 class PrintDot(keras.callbacks.Callback):
   def on_epoch_end(self,epoch,logs):
@@ -159,7 +157,7 @@ class PrintDot(keras.callbacks.Callback):
     print(epoch*100/EPOCHS,'%')
     print('.', end='')
 
-history = model.fit(trainx, trainy, epochs=EPOCHS,
+history = model.fit(temp, y, epochs=EPOCHS,
                   validation_split=0.2, verbose=0,
                   callbacks=[PrintDot()])
 model.save('model.h5')
@@ -177,4 +175,3 @@ def plot_history(history):
   plt.show()
 
 plot_history(history)
-
